@@ -46,7 +46,7 @@ def compare_intervention_vs_original(original, intervened):
 
 
 def load_data():
-    df = pd.read_excel("default_of_credit_card_clients.xls", header=1)
+    df = pd.read_excel("default_of_credit_card_clients.xlsx", engine="openpyxl", header=1)
     df = df.rename(columns={"default payment next month": "Default"})
     df["LIMIT_BAL"] = pd.qcut(df["LIMIT_BAL"], 2, labels=[0, 1])
     df["Age"] = pd.qcut(df["AGE"], 2, labels=[0, 1])
