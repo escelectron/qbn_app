@@ -1,3 +1,10 @@
+"""
+Quantum Explainable AI Dashboard
+Author: Pranav Sanghadia
+LinkedIn: https://www.linkedin.com/in/sanghadia
+License: MIT
+"""
+
 import pennylane as qml
 from pennylane import numpy as np
 

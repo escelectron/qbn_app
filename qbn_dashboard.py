@@ -1,3 +1,10 @@
+"""
+Quantum Explainable AI Dashboard
+Author: Pranav Sanghadia
+LinkedIn: https://www.linkedin.com/in/sanghadia
+License: MIT
+"""
+
 import streamlit as st
 import pandas as pd
 import seaborn as sns
@@ -6,12 +13,12 @@ from interventional_V1_0 import load_data, compute_joint_distribution, simulate_
 from quantum_backend import batch_inference
 
 st.set_page_config(page_title="Quantum Explainable AI Dashboard", layout="wide")
-st.title("🔮 Quantum Bayesian Network: Credit Risk Simulator")
+st.title("⚛️ Quantum Bayesian Network: Credit Risk Simulator ⚛️")
 
 st.markdown("""
 This dashboard lets you simulate **credit risk default probability** using interventional inference.
 You can compare two backends:
-- 🧠 **Classical**: Computes empirical probabilities via groupby aggregation.
+- 🧿 **Classical**: Computes empirical probabilities via groupby aggregation.
 - 🧪 **Quantum**: Simulates a quantum circuit where feature values are encoded as qubit rotations.
 
 Use the sidebar to intervene (force) one or more feature values and observe the change in risk.
@@ -64,4 +71,19 @@ if interventions:
     ax.set_xlabel("Feature Combination (LIMIT_BAL-Age-PAY_AMT1)")
     st.pyplot(fig)
 else:
-    st.info("Use the sidebar to select an intervention and run a simulation.")
+    st.subheader(f"📊 Default Inference: P(Default=1) without intervention using {backend} backend")
+    if backend == "Quantum":
+        result_df = pd.DataFrame(batch_inference(profiles, intervention_target=None))
+    else:
+        result_df = compute_joint_distribution(df)
+        result_df.rename(columns={"P(Default=1)": "P(Default=1) observed"}, inplace=True)
+
+    st.dataframe(result_df)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.barplot(data=result_df, x=result_df[["LIMIT_BAL", "Age", "PAY_AMT1"]].astype(str).agg('-'.join, axis=1), y='P(Default=1) observed', ax=ax)
+    ax.set_title(f"P(Default=1) by Profile - {backend} Backend")
+    ax.set_ylabel("P(Default=1)")
+    ax.set_xlabel("Feature Combination (LIMIT_BAL-Age-PAY_AMT1)")
+    st.pyplot(fig)
+

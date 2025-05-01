@@ -1,4 +1,10 @@
-#
+"""
+Quantum Explainable AI Dashboard
+Author: Pranav Sanghadia
+LinkedIn: https://www.linkedin.com/in/sanghadia
+License: MIT
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
