@@ -7,7 +7,13 @@ License: MIT
 # File Name: classical_bn.py
 
 import pandas as pd
-from pgmpy.models import DiscreteBayesianNetwork as BayesianNetwork
+
+try:
+    from pgmpy.models import DiscreteBayesianNetwork as BayesianNetwork
+except ImportError:
+    from pgmpy.models import BayesianNetwork
+
+
 from pgmpy.estimators import MaximumLikelihoodEstimator
 from pgmpy.inference import VariableElimination
 from interventional_V1_0 import load_data
