@@ -8,8 +8,7 @@ License: MIT
 
 import streamlit as st
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
+import plotly.express as px
 from interventional_V1_0 import load_data, compute_joint_distribution, simulate_intervention
 from quantum_backend import batch_inference
 from classical_bn import bayesian_inference, bayesian_intervention  # NEW IMPORT
@@ -26,6 +25,18 @@ You can compare three backends: 1) Classical 2) Bayesian and 3) Quantum. Select 
 @st.cache_data
 def get_data():
     return load_data()
+
+@st.cache_data
+def run_quantum_inference(profiles, intervention_target):
+    return batch_inference(profiles, intervention_target)
+
+@st.cache_data
+def run_bayesian_inference(profiles):
+    return bayesian_inference(profiles)
+
+@st.cache_data
+def run_bayesian_intervention(profiles, mapped):
+    return bayesian_intervention(profiles, mapped)
 
 df = get_data()
 
@@ -77,11 +88,7 @@ profiles = [
 
 @st.cache_data
 def make_bar_chart(df, x_col, y_col, title):
-    fig, ax = plt.subplots(figsize=(6, 2))
-    sns.barplot(data=df, x=x_col, y=y_col, ax=ax)
-    ax.set_title(title)
-    ax.set_ylabel(y_col)
-    ax.set_xlabel("Feature Combination (LIMIT_BAL-Age-PAY_AMT1)")
+    fig = px.bar(df, x=x_col, y=y_col, title=title, height=400)
     return fig
 
 if interventions:
@@ -91,9 +98,9 @@ if interventions:
     mapped = {feature_index[k]: v for k, v in interventions.items()}
 
     if backend == "Quantum":
-        result_df = pd.DataFrame(batch_inference(profiles, intervention_target=mapped))
+        result_df = pd.DataFrame(run_quantum_inference(profiles, mapped))
     elif backend == "Bayesian":
-        result_df = pd.DataFrame(bayesian_intervention(profiles, mapped))
+        result_df = pd.DataFrame(run_bayesian_intervention(profiles, mapped))
     else:
         original = compute_joint_distribution(df)
         intervened = simulate_intervention(df, interventions)
@@ -104,7 +111,7 @@ if interventions:
         result_df = merged[["LIMIT_BAL", "Age", "PAY_AMT1", "P(Default=1) observed", "P(Default=1) do()", "Delta"]]
 
     x_labels = result_df[["LIMIT_BAL", "Age", "PAY_AMT1"]].astype(str).agg('-'.join, axis=1)
-    st.pyplot(make_bar_chart(result_df.assign(Profile=x_labels), "Profile", "Delta", f"Δ P(Default=1) After {backend} Intervention"))
+    st.plotly_chart(make_bar_chart(result_df.assign(Profile=x_labels), "Profile", "Delta" if interventions else "P(Default=1) observed", f"Δ P(Default=1) After {backend} Intervention" if interventions else f"P(Default=1) by Profile - {backend} Backend"), use_container_width=True)
 
     st.markdown("""
     The table below shows how the probability of default changes for each feature combination after applying the selected intervention.
@@ -115,15 +122,15 @@ if interventions:
 else:
     st.subheader(f"📊 Default Inference: P(Default=1) without intervention using {backend} backend")
     if backend == "Quantum":
-        result_df = pd.DataFrame(batch_inference(profiles, intervention_target=None))
+        result_df = pd.DataFrame(run_quantum_inference(profiles, None))
     elif backend == "Bayesian":
-        result_df = pd.DataFrame(bayesian_inference(profiles))
+        result_df = pd.DataFrame(run_bayesian_inference(profiles))
     else:
         result_df = compute_joint_distribution(df)
         result_df.rename(columns={"P(Default=1)": "P(Default=1) observed"}, inplace=True)
 
     x_labels = result_df[["LIMIT_BAL", "Age", "PAY_AMT1"]].astype(str).agg('-'.join, axis=1)
-    st.pyplot(make_bar_chart(result_df.assign(Profile=x_labels), "Profile", "P(Default=1) observed", f"P(Default=1) by Profile - {backend} Backend"))
+    st.plotly_chart(make_bar_chart(result_df.assign(Profile=x_labels), "Profile", "P(Default=1) observed", f"P(Default=1) by Profile - {backend} Backend"), use_container_width=True)
 
     st.markdown("""
     This plot shows the default risk for each combination of features without applying any intervention. These are the baseline probabilities based on the selected backend.
