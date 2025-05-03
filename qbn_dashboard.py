@@ -23,7 +23,11 @@ You can compare three backends: 1) Classical 2) Bayesian and 3) Quantum. Select 
 """)
 
 # Load and show dataset
-df = load_data()
+@st.cache_data
+def get_data():
+    return load_data()
+
+df = get_data()
 
 st.sidebar.header("🔧 Intervention Controls")
 backend = st.sidebar.radio("Select Backend", ["Classical", "Bayesian", "Quantum"], index=2)
@@ -34,7 +38,7 @@ pay_amt1 = st.sidebar.radio("PAY_AMT1 (Last Repayment Amount)", [None, 0, 1], in
 # Show method explanation
 if backend == "Classical":
     st.info("""
-    🧠 **Classical Method**: Empirical probability computed from the dataset.
+    🏠 **Classical Method**: Empirical probability computed from the dataset.
     For each feature combination, it groups records and calculates the mean of the Default column:
 
     **P(Default=1 | features) ≈ mean(Default)**
@@ -43,7 +47,7 @@ if backend == "Classical":
     """)
 elif backend == "Bayesian":
     st.info("""
-    📊 **Bayesian Method**: Probabilistic model built using Classical Bayesian Network.
+    🧪 **Bayesian Method**: Probabilistic model built using Classical Bayesian Network.
     It defines conditional dependencies between features and computes probability using inference:
 
     **P(Default=1 | features)** and **P(Default=1 | do(X = x))**
@@ -52,7 +56,7 @@ elif backend == "Bayesian":
     """)
 elif backend == "Quantum":
     st.info("""
-    🧪 **Quantum Method**: Simulates a quantum circuit using qubit rotations (RY).
+    Ψ **Quantum Method**: Simulates a quantum circuit using qubit rotations (RY).
     Feature values are encoded as rotation angles, then entangled with a qubit representing Default.
 
     **P(Default=1)** is estimated by measuring the qubit amplitude.
@@ -70,6 +74,15 @@ profiles = [
     [0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1],
     [1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]
 ]
+
+@st.cache_data
+def make_bar_chart(df, x_col, y_col, title):
+    fig, ax = plt.subplots(figsize=(6, 2))
+    sns.barplot(data=df, x=x_col, y=y_col, ax=ax)
+    ax.set_title(title)
+    ax.set_ylabel(y_col)
+    ax.set_xlabel("Feature Combination (LIMIT_BAL-Age-PAY_AMT1)")
+    return fig
 
 if interventions:
     st.subheader(f"📈 Intervention Results: do({interventions}) using {backend} backend")
@@ -90,13 +103,8 @@ if interventions:
         merged['P(Default=1) do()'] = merged["P(Default=1)_do"]
         result_df = merged[["LIMIT_BAL", "Age", "PAY_AMT1", "P(Default=1) observed", "P(Default=1) do()", "Delta"]]
 
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.barplot(data=result_df, x=result_df[["LIMIT_BAL", "Age", "PAY_AMT1"]].astype(str).agg('-'.join, axis=1), y='Delta', ax=ax)
-    ax.axhline(0, color='gray', linestyle='--')
-    ax.set_title(f"Δ P(Default=1) After {backend} Intervention")
-    ax.set_ylabel("Change in P(Default=1)")
-    ax.set_xlabel("Feature Combination (LIMIT_BAL-Age-PAY_AMT1)")
-    st.pyplot(fig)
+    x_labels = result_df[["LIMIT_BAL", "Age", "PAY_AMT1"]].astype(str).agg('-'.join, axis=1)
+    st.pyplot(make_bar_chart(result_df.assign(Profile=x_labels), "Profile", "Delta", f"Δ P(Default=1) After {backend} Intervention"))
 
     st.markdown("""
     The table below shows how the probability of default changes for each feature combination after applying the selected intervention.
@@ -114,15 +122,10 @@ else:
         result_df = compute_joint_distribution(df)
         result_df.rename(columns={"P(Default=1)": "P(Default=1) observed"}, inplace=True)
 
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.barplot(data=result_df, x=result_df[["LIMIT_BAL", "Age", "PAY_AMT1"]].astype(str).agg('-'.join, axis=1), y='P(Default=1) observed', ax=ax)
-    ax.set_title(f"P(Default=1) by Profile - {backend} Backend")
-    ax.set_ylabel("P(Default=1)")
-    ax.set_xlabel("Feature Combination (LIMIT_BAL-Age-PAY_AMT1)")
-    st.pyplot(fig)
+    x_labels = result_df[["LIMIT_BAL", "Age", "PAY_AMT1"]].astype(str).agg('-'.join, axis=1)
+    st.pyplot(make_bar_chart(result_df.assign(Profile=x_labels), "Profile", "P(Default=1) observed", f"P(Default=1) by Profile - {backend} Backend"))
 
     st.markdown("""
     This plot shows the default risk for each combination of features without applying any intervention. These are the baseline probabilities based on the selected backend.
     """)
     st.dataframe(result_df)
-
