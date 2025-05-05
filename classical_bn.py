@@ -6,64 +6,50 @@ License: MIT
 """
 # File Name: classical_bn.py
 
-import pandas as pd
-
-try:
-    from pgmpy.models import DiscreteBayesianNetwork as BayesianNetwork
-except ImportError:
-    from pgmpy.models import BayesianNetwork
-
-
-from pgmpy.estimators import MaximumLikelihoodEstimator
+from pgmpy.models import DiscreteBayesianNetwork as BayesianNetwork
 from pgmpy.inference import VariableElimination
+from pgmpy.estimators import MaximumLikelihoodEstimator
 from interventional_V1_0 import load_data
+
+feature_columns = ["LIMIT_BAL", "Age", "PAY_AMT1", "EDUCATION", "MARRIAGE"]
 
 def build_model():
     df = load_data()
-    model = BayesianNetwork([
-        ("LIMIT_BAL", "Default"),
-        ("Age", "Default"),
-        ("PAY_AMT1", "Default")
-    ])
+    model = BayesianNetwork([(feat, "Default") for feat in feature_columns])
+    df[feature_columns] = df[feature_columns].astype(int)
     model.fit(df, estimator=MaximumLikelihoodEstimator)
     return model
 
-# Build once and reuse
 _bayesian_model = build_model()
 _infer = VariableElimination(_bayesian_model)
-
-# Mapping for index to column name
-features = ["LIMIT_BAL", "Age", "PAY_AMT1"]
 
 def bayesian_inference(profiles):
     results = []
     for p in profiles:
-        evidence = dict(zip(features, p))
+        evidence = dict(zip(feature_columns, p))
         q = _infer.query(variables=["Default"], evidence=evidence, show_progress=False)
         prob = round(q.values[1], 4)
-        results.append({**evidence, "P(Default=1) observed": prob})
+        results.append({**evidence, "P(Default=1)": prob})
     return results
 
 def bayesian_intervention(profiles, intervention_target):
     results = []
+    feature_index = {name: i for i, name in enumerate(feature_columns)}
     for p in profiles:
-        # Override the features using intervention
         intervened = p.copy()
-        for idx, val in intervention_target.items():
-            intervened[idx] = val
-        evidence = dict(zip(features, intervened))
+        for name, val in intervention_target.items():
+            if name in feature_index:
+                intervened[feature_index[name]] = val
+        evidence = dict(zip(feature_columns, intervened))
         q = _infer.query(variables=["Default"], evidence=evidence, show_progress=False)
         p_do = round(q.values[1], 4)
 
-        # Also compute the original probability
-        orig_evidence = dict(zip(features, p))
+        orig_evidence = dict(zip(feature_columns, p))
         q_orig = _infer.query(variables=["Default"], evidence=orig_evidence, show_progress=False)
         p_obs = round(q_orig.values[1], 4)
 
         results.append({
-            "LIMIT_BAL": p[0],
-            "Age": p[1],
-            "PAY_AMT1": p[2],
+            **orig_evidence,
             "P(Default=1) observed": p_obs,
             "P(Default=1) do()": p_do,
             "Delta": round(p_do - p_obs, 4)
