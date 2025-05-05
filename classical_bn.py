@@ -17,6 +17,7 @@ feature_columns = ["LIMIT_BAL", "Age", "PAY_AMT1", "EDUCATION", "MARRIAGE"]
 def build_model():
     df = load_data()
     model = BayesianNetwork([(feat, "Default") for feat in feature_columns])
+    df[feature_columns + ["Default"]] = df[feature_columns + ["Default"]].astype(int)
     df[feature_columns] = df[feature_columns].astype(int)
     model.fit(df, estimator=MaximumLikelihoodEstimator)
     return model
