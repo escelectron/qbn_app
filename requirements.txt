@@ -6,6 +6,6 @@ seaborn
 scikit-learn
 xgboost
 openpyxl
-pgmpy==0.1.21
+pgmpy
 plotly
 pennylane
