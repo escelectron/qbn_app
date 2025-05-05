@@ -6,7 +6,8 @@ License: MIT
 """
 # File Name: classical_bn.py
 
-from pgmpy.models import BayesianNetwork
+#from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork as BayesianNetwork
 from pgmpy.inference import VariableElimination
 from pgmpy.estimators import MaximumLikelihoodEstimator
 from interventional_V1_0 import load_data
